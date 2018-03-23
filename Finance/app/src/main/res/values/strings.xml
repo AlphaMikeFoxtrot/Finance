@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Finance</string>
+
+    <string name="shared_preference_name">current_user</string>
+    <string name="shared_preference_username">username</string>
+    <string name="shared_preference_password">password</string>
+    <string name="shared_preference_access_level">access_level</string>
+    <string name="shared_preference_login_boolean">is_logged_in</string>
+
 </resources>
