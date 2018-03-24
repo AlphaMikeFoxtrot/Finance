@@ -2,6 +2,7 @@ package com.anonymous.finance;
 
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -12,11 +13,15 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Layout;
+import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -31,11 +36,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
@@ -44,6 +52,8 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton add, remove;
     private RecyclerView recyclerView;
     private android.support.v7.widget.Toolbar toolbar;
+
+    ArrayList<Transaction> transactions = new ArrayList<>();
 
     ProgressDialog progressDialog;
 
@@ -92,20 +102,55 @@ public class MainActivity extends AppCompatActivity {
         add.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                // Toast.makeText(MainActivity.this, "ADD", Toast.LENGTH_SHORT).show();
-                addAmount();
+                debit();
             }
         });
 
         remove.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(MainActivity.this, "REMOVE", Toast.LENGTH_SHORT).show();
+                credit();
             }
         });
+
+        registerForContextMenu(recyclerView);
     }
 
-    private void addAmount() {
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        final int POS = item.getOrder();
+        // int position = item.getIntent().getIntExtra("position", -1);
+        if(item.getTitle() == "delete"){
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder
+                    .setCancelable(false)
+                    .setMessage("Are you sure you want to delete the transaction?")
+                    .setPositiveButton("YES", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            Transaction selectedTrans = transactions.get(POS);
+                            deleteTransaction(selectedTrans.getUuid());
+                        }
+                    }).setNegativeButton("NO", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            dialogInterface.dismiss();
+                        }
+                    });
+
+            AlertDialog alertDialog = builder.create();
+            alertDialog.show();
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    private void deleteTransaction(String uuid) {
+        new DeleteTransaction().execute(uuid);
+    }
+
+    private void credit() {
         LayoutInflater li = LayoutInflater.from(this);
         View promptsView = li.inflate(R.layout.add_amount_prompt, null);
 
@@ -126,15 +171,46 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton("SUBMIT",
                         new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog,int id) {
-                                Toast.makeText(MainActivity.this, "" + amount.getText().toString() + "\n" + comment.getText().toString(), Toast.LENGTH_SHORT).show();
-                                try {
-                                    getContents();
-                                } catch (ExecutionException e) {
-                                    e.printStackTrace();
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
+                                new DebitCredit().execute(amount.getText().toString(), comment.getText().toString(), "credit");
+                            }
+                        })
+                .setNegativeButton("Cancel",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog,int id) {
+                                dialog.cancel();
+                            }
+                        });
 
+        // create alert dialog
+        AlertDialog alertDialog = alertDialogBuilder.create();
+
+        // show it
+        alertDialog.show();
+
+    }
+
+    private void debit() {
+        LayoutInflater li = LayoutInflater.from(this);
+        View promptsView = li.inflate(R.layout.add_amount_prompt, null);
+
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+                this);
+
+        // set prompts.xml to alertdialog builder
+        alertDialogBuilder.setView(promptsView);
+
+        final EditText amount = (EditText) promptsView
+                .findViewById(R.id.prompt_amount);
+
+        final EditText comment = promptsView.findViewById(R.id.prompt_comment);
+
+        // set dialog message
+        alertDialogBuilder
+                .setCancelable(false)
+                .setPositiveButton("SUBMIT",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog,int id) {
+                                new DebitCredit().execute(amount.getText().toString(), comment.getText().toString(), "debit");
                             }
                         })
                 .setNegativeButton("Cancel",
@@ -153,7 +229,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void getContents() throws ExecutionException, InterruptedException {
 
-        adapter = new TransactionsAdapter(this, new GetTransactions().execute().get());
+        transactions = new GetTransactions().execute().get();
+        adapter = new TransactionsAdapter(this, transactions);
         recyclerView.setAdapter(adapter);
 
         String total_str = new GetTotal().execute().get();
@@ -166,6 +243,8 @@ public class MainActivity extends AppCompatActivity {
             total.setText(total_str);
             total.setTextColor(Color.parseColor("#008000"));
         }
+
+        Toast.makeText(this, "Data Updated", Toast.LENGTH_SHORT).show();
 
     }
 
@@ -197,8 +276,38 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
 
+        } else if (item.getItemId() == R.id.reset){
+            reset();
         }
         return true;
+    }
+
+    private void reset() {
+
+        LayoutInflater li = LayoutInflater.from(this);
+        View promptsView = li.inflate(R.layout.reset_promt , null);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+
+        builder.setView(promptsView);
+
+        builder
+                .setCancelable(false)
+                .setPositiveButton("YES", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        new Reset().execute();
+                    }
+                })
+                .setNegativeButton("NO", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.dismiss();
+                    }
+                });
+
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
     }
 
     private class GetTransactions extends AsyncTask<Void, Void, ArrayList<Transaction>>{
@@ -246,6 +355,7 @@ public class MainActivity extends AppCompatActivity {
                         String username = transaction.getString("username");
                         String type = transaction.getString("type");
                         String comment = transaction.getString("comment");
+                        String uuid = transaction.getString("uuid");
                         String amount = "";
                         if(type.contains("debit")) {
                             amount = "+ " + transaction.getString("amount");
@@ -255,7 +365,7 @@ public class MainActivity extends AppCompatActivity {
                         String date = transaction.getString("date");
                         String board = transaction.getString("board");
                         String changed_balance = transaction.getString("changed_balance");
-                        Transaction current_transaction = new Transaction(comment, type, amount, username, date, board, changed_balance);
+                        Transaction current_transaction = new Transaction(comment, type, amount, username, date, board, changed_balance, uuid);
                         transactions.add(current_transaction);
 
                     }
@@ -343,6 +453,258 @@ public class MainActivity extends AppCompatActivity {
                 return "io: " + e.toString();
             }
 
+        }
+    }
+
+    private class DebitCredit extends AsyncTask<String, Void, String>{
+
+        @Override
+        protected void onPreExecute() {
+            progressDialog = new ProgressDialog(MainActivity.this);
+            progressDialog.setMessage("running payment protocol....");
+            progressDialog.show();
+        }
+
+        @Override
+        protected String doInBackground(String... strings) {
+            String amount = strings[0];
+            String comment = strings[1];
+            String type = strings[2];
+            String username = MainActivity.this
+                    .getSharedPreferences(getString(R.string.shared_preference_name), MODE_PRIVATE)
+                    .getString(getString(R.string.shared_preference_username), "");
+
+            HttpURLConnection httpURLConnection = null;
+            BufferedReader bufferedReader = null;
+            BufferedWriter bufferedWriter = null;
+
+            try {
+
+                URL url = new URL("http://fardeenpanjwani.com/money/update/add_transaction.php");
+                httpURLConnection = (HttpURLConnection) url.openConnection();
+                httpURLConnection.setDoInput(true);
+                httpURLConnection.setDoOutput(true);
+                httpURLConnection.connect();
+
+                bufferedWriter = new BufferedWriter(new OutputStreamWriter(httpURLConnection.getOutputStream(), "UTF-8"));
+
+                String data = URLEncoder.encode("username", "UTF-8") +"="+ URLEncoder.encode(username, "UTF-8") +"&"+
+                        URLEncoder.encode("type", "UTF-8") +"="+ URLEncoder.encode(type, "UTF-8") +"&"+
+                        URLEncoder.encode("amount", "UTF-8") +"="+ URLEncoder.encode(amount, "UTF-8") +"&"+
+                        URLEncoder.encode("comment", "UTF-8") +"="+ URLEncoder.encode(comment, "UTF-8");
+
+                bufferedWriter.write(data);
+                bufferedWriter.flush();
+                bufferedWriter.close();
+
+                bufferedReader = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
+
+                String line;
+                StringBuilder response = new StringBuilder();
+
+                while((line = bufferedReader.readLine()) != null) response.append(line);
+
+                return response.toString();
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+                return "url: " + e.toString();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return "IO: " + e.toString();
+            } finally {
+                if(httpURLConnection != null) httpURLConnection.disconnect();
+                if(bufferedReader != null) {
+                    try {
+                        bufferedReader.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            progressDialog.dismiss();
+            if(s.contains("fail")){
+                Toast.makeText(MainActivity.this, "and error occurred when paying amount\n" + s, Toast.LENGTH_SHORT).show();
+                try {
+                    getContents();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            } else if(s.contains("success")){
+                Toast.makeText(MainActivity.this, "payment successful", Toast.LENGTH_SHORT).show();
+                try {
+                    getContents();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private class DeleteTransaction extends AsyncTask<String, Void, String>{
+
+        @Override
+        protected void onPreExecute() {
+            progressDialog = new ProgressDialog(MainActivity.this);
+            progressDialog.setMessage("deleting transaction...");
+            progressDialog.show();
+        }
+
+        @Override
+        protected String doInBackground(String... strings) {
+            String uuid = strings[0];
+
+            HttpURLConnection httpURLConnection = null;
+            BufferedWriter bufferedWriter = null;
+            BufferedReader bufferedReader = null;
+
+            try {
+
+                URL url = new URL("http://fardeenpanjwani.com/money/update/delete_transaction.php");
+                httpURLConnection = (HttpURLConnection) url.openConnection();
+                httpURLConnection.setDoOutput(true);
+                httpURLConnection.setDoInput(true);
+                httpURLConnection.connect();
+
+                bufferedWriter = new BufferedWriter(new OutputStreamWriter(httpURLConnection.getOutputStream(), "UTF-8"));
+
+                String data = URLEncoder.encode("uuid", "UTF-8") +"="+ URLEncoder.encode(uuid, "UTF-8");
+
+                bufferedWriter.write(data);
+                bufferedWriter.flush();
+                bufferedWriter.close();
+
+                bufferedReader = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
+
+                String line;
+                StringBuilder response = new StringBuilder();
+
+                while((line = bufferedReader.readLine()) != null) response.append(line);
+
+                return response.toString();
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+                return "url: " + e.toString();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return "IO: " + e.toString();
+            } finally {
+                if(httpURLConnection != null) httpURLConnection.disconnect();
+                if(bufferedReader != null){
+                    try {
+                        bufferedReader.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            progressDialog.dismiss();
+            if(s.contains("success")){
+                Toast.makeText(MainActivity.this, "entry successfully deleted", Toast.LENGTH_SHORT).show();
+                try {
+                    getContents();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            } else if(s.contains("fail")){
+                Toast.makeText(MainActivity.this, "an error occured while deleting transaction: \n" + s, Toast.LENGTH_SHORT).show();
+                try {
+                    getContents();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private class Reset extends AsyncTask<String, Void, String>{
+
+        @Override
+        protected void onPreExecute() {
+            progressDialog = new ProgressDialog(MainActivity.this);
+            progressDialog.setMessage("resetting....");
+            progressDialog.show();
+        }
+
+        @Override
+        protected String doInBackground(String... strings) {
+            HttpURLConnection httpURLConnection = null;
+            BufferedReader bufferedReader = null;
+
+            try {
+
+                URL url = new URL("http://fardeenpanjwani.com/money/update/reset.php");
+                httpURLConnection = (HttpURLConnection) url.openConnection();
+                httpURLConnection.setDoOutput(true);
+                httpURLConnection.connect();
+
+                bufferedReader = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
+
+                String line;
+                StringBuilder response = new StringBuilder();
+
+                while((line = bufferedReader.readLine()) != null) response.append(line);
+
+                return response.toString();
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+                return "url: " + e.toString();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return "IO: " + e.toString();
+            } finally {
+                if(httpURLConnection != null) httpURLConnection.disconnect();
+                if(bufferedReader != null){
+                    try {
+                        bufferedReader.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            progressDialog.dismiss();
+            if(s.contains("success")){
+                Toast.makeText(MainActivity.this, "data successfully reset", Toast.LENGTH_SHORT).show();
+                try {
+                    getContents();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            } else if (s.contains("fail")){
+                Toast.makeText(MainActivity.this, "an error occurred while resetting the data: \n" + s, Toast.LENGTH_SHORT).show();
+                try {
+                    getContents();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 }

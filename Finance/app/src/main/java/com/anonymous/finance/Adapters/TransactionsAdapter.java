@@ -1,8 +1,10 @@
 package com.anonymous.finance.Adapters;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.support.v7.widget.RecyclerView;
+import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -56,7 +58,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<TransactionsAdapte
         return this.transactions.size();
     }
 
-    public class TransactionViewHolder extends RecyclerView.ViewHolder{
+    public class TransactionViewHolder extends RecyclerView.ViewHolder implements View.OnCreateContextMenuListener{
 
         TextView comment, amount;
 
@@ -65,6 +67,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<TransactionsAdapte
 
             this.comment = itemView.findViewById(R.id.comment);
             this.amount = itemView.findViewById(R.id.amount);
+            itemView.setOnCreateContextMenuListener(this);
+        }
+
+        @Override
+        public void onCreateContextMenu(ContextMenu contextMenu, View view, ContextMenu.ContextMenuInfo contextMenuInfo) {
+            contextMenu.add(0, view.getId(), getAdapterPosition(), "delete");
         }
     }
 

@@ -6,9 +6,9 @@ package com.anonymous.finance.Classes;
 
 public class Transaction {
 
-    private String comment, type, amount, username, date, board, changedBalance;
+    private String comment, type, amount, username, date, board, changedBalance, uuid;
 
-    public Transaction(String comment, String type, String amount, String username, String date, String board, String changedBalance) {
+    public Transaction(String comment, String type, String amount, String username, String date, String board, String changedBalance, String uuid) {
         this.comment = comment;
         this.type = type;
         this.amount = amount;
@@ -16,6 +16,11 @@ public class Transaction {
         this.date = date;
         this.board = board;
         this.changedBalance = changedBalance;
+        this.uuid = uuid;
+    }
+
+    public String getUuid() {
+        return uuid;
     }
 
     public String getComment() {
