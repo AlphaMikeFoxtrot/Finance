@@ -19,6 +19,26 @@
         android:fontFamily="sans-serif-smallcaps"
         android:gravity="center"
         android:layout_margin="12dp"
-        android:text="WARNING: THIS ACTION CANNOT BE UNDONE.DO YOU STILL WANT TO PROCEED?"/>
+        android:text="WARNING: THIS ACTION CANNOT BE UNDONE.ENTER ROOT CREDENTIALS AND PRESS SUBMIT TO CONTINUE"/>
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="username"
+        android:fontFamily="@string/shared_preference_username"
+        android:inputType="textWebEditText"
+        android:textStyle="bold"
+        android:id="@+id/root_username"
+        android:layout_margin="12dp"/>
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="password"
+        android:fontFamily="@string/shared_preference_username"
+        android:textStyle="bold"
+        android:inputType="textPassword"
+        android:id="@+id/root_password"
+        android:layout_margin="12dp"/>
 
 </LinearLayout>

@@ -7,31 +7,12 @@
     android:layout_gravity="center"
     android:gravity="bottom">
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="10dp"
-        android:background="@android:color/transparent"/>
-
-    <!--<View-->
-        <!--android:layout_marginTop="12dp"-->
-        <!--android:layout_width="match_parent"-->
-        <!--android:layout_height="1dp"-->
-        <!--android:background="@android:color/black"/>-->
-
-    <!--<TextView-->
-        <!--android:layout_width="match_parent"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:fontFamily="sans-serif-smallcaps"-->
-        <!--android:text="DEBIT"-->
-        <!--style="@style/TextAppearance.AppCompat.Headline"-->
-        <!--android:layout_gravity="center"-->
-        <!--android:gravity="center"-->
-        <!--android:textStyle="bold"/>-->
-
-    <!--<View-->
-        <!--android:layout_width="match_parent"-->
-        <!--android:layout_height="1dp"-->
-        <!--android:background="@android:color/black"/>-->
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/coins"
+        android:layout_gravity="center"
+        android:layout_margin="12dp"/>
 
     <EditText
         android:id="@+id/prompt_amount"

@@ -9,9 +9,11 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.AsyncTask;
+import android.support.design.widget.Snackbar;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.CardView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Layout;
@@ -89,6 +91,14 @@ public class MainActivity extends AppCompatActivity {
 
         sharedPreferences = this.getSharedPreferences(getString(R.string.shared_preference_name), MODE_PRIVATE);
         editor = sharedPreferences.edit();
+
+        if(sharedPreferences.getString(getString(R.string.shared_preference_username), "").contains("user")){
+            CardView cardView = findViewById(R.id.card_view);
+            cardView.setVisibility(View.INVISIBLE);
+
+            // android.support.v7.widget.Toolbar toolbar = findViewById(R.id.toolbar);
+            // toolbar.setVisibility(View.INVISIBLE);
+        }
 
         total = findViewById(R.id.total);
 
@@ -254,7 +264,8 @@ public class MainActivity extends AppCompatActivity {
             total.setTextColor(Color.parseColor("#008000"));
         }
 
-        Toast.makeText(this, "Data Updated", Toast.LENGTH_SHORT).show();
+        // Toast.makeText(this, "Data Updated", Toast.LENGTH_SHORT).show();
+        Snackbar.make(findViewById(R.id.coordinatorLayout), "Data Updated", Snackbar.LENGTH_LONG).show();
 
     }
 
@@ -338,19 +349,29 @@ public class MainActivity extends AppCompatActivity {
         LayoutInflater li = LayoutInflater.from(this);
         View promptsView = li.inflate(R.layout.reset_promt , null);
 
+        final EditText rootUsername = promptsView.findViewById(R.id.root_username);
+        final EditText rootPassword = promptsView.findViewById(R.id.root_password);
+
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
 
         builder.setView(promptsView);
 
         builder
                 .setCancelable(false)
-                .setPositiveButton("YES", new DialogInterface.OnClickListener() {
+                .setPositiveButton("SUBMIT", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        new Reset().execute();
+                        if(rootUsername.getText().toString().contains("admin") && rootPassword.getText().toString().contains("admin")) {
+                            new Reset().execute();
+                        } else {
+                            dialogInterface.dismiss();
+                            // Toast.makeText(MainActivity.this, "username and password incorrect.", Toast.LENGTH_SHORT).show();
+                            Snackbar.make(findViewById(R.id.coordinatorLayout), "username and password incorrect", Snackbar.LENGTH_LONG).show();
+
+                        }
                     }
                 })
-                .setNegativeButton("NO", new DialogInterface.OnClickListener() {
+                .setNegativeButton("CANCEL", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         dialogInterface.dismiss();
@@ -394,7 +415,8 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if(response.toString().contains("error")){
-                    Toast.makeText(MainActivity.this, "Empty list returned", Toast.LENGTH_SHORT).show();
+                    // Toast.makeText(MainActivity.this, "Empty list returned", Toast.LENGTH_SHORT).show();
+                    Snackbar.make(findViewById(R.id.coordinatorLayout), "The list seems to be empty", Snackbar.LENGTH_LONG).show();
                     progressDialog.dismiss();
                     return transactions;
                 } else {
@@ -580,7 +602,8 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String s) {
             progressDialog.dismiss();
             if(s.contains("fail")){
-                Toast.makeText(MainActivity.this, "and error occurred when paying amount\n" + s, Toast.LENGTH_SHORT).show();
+                // Toast.makeText(MainActivity.this, "and error occurred when paying amount\n" + s, Toast.LENGTH_SHORT).show();
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "and error occurred when paying amount\n" + s, Snackbar.LENGTH_LONG).show();
                 try {
                     getContents();
                 } catch (ExecutionException e) {
@@ -589,7 +612,8 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             } else if(s.contains("success")){
-                Toast.makeText(MainActivity.this, "payment successful", Toast.LENGTH_SHORT).show();
+                // Toast.makeText(MainActivity.this, "payment successful", Toast.LENGTH_SHORT).show();
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "payment successful", Snackbar.LENGTH_LONG).show();
                 try {
                     getContents();
                 } catch (ExecutionException e) {
@@ -665,7 +689,8 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String s) {
             progressDialog.dismiss();
             if(s.contains("success")){
-                Toast.makeText(MainActivity.this, "entry successfully deleted", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(MainActivity.this, "entry successfully deleted", Toast.LENGTH_SHORT).show();
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "transaction successfully deleted", Toast.LENGTH_LONG).show();
                 try {
                     getContents();
                 } catch (ExecutionException e) {
@@ -674,7 +699,8 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             } else if(s.contains("fail")){
-                Toast.makeText(MainActivity.this, "an error occured while deleting transaction: \n" + s, Toast.LENGTH_SHORT).show();
+                // Toast.makeText(MainActivity.this, "an error occured while deleting transaction: \n" + s, Toast.LENGTH_SHORT).show();
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "an error occured while deleting transaction: \n" + s, Snackbar.LENGTH_LONG).show();
                 try {
                     getContents();
                 } catch (ExecutionException e) {
@@ -738,7 +764,8 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String s) {
             progressDialog.dismiss();
             if(s.contains("success")){
-                Toast.makeText(MainActivity.this, "data successfully reset", Toast.LENGTH_SHORT).show();
+                // Toast.makeText(MainActivity.this, "data successfully reset", Toast.LENGTH_SHORT).show();
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "data reset successful", Snackbar.LENGTH_LONG).show();
                 try {
                     getContents();
                 } catch (ExecutionException e) {
@@ -747,7 +774,8 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             } else if (s.contains("fail")){
-                Toast.makeText(MainActivity.this, "an error occurred while resetting the data: \n" + s, Toast.LENGTH_SHORT).show();
+                // Toast.makeText(MainActivity.this, "an error occurred while resetting the data: \n" + s, Toast.LENGTH_SHORT).show();
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "an error occurred while resetting the data: \n" + s, Snackbar.LENGTH_LONG).show();
                 try {
                     getContents();
                 } catch (ExecutionException e) {
@@ -828,7 +856,8 @@ public class MainActivity extends AppCompatActivity {
             progressDialog.dismiss();
             ArrayList<Transaction> transactionsFiltered = new ArrayList<>();
             if(s.contains("fail")){
-                Toast.makeText(MainActivity.this, "something went wrong: \n" + s, Toast.LENGTH_SHORT).show();
+                // Toast.makeText(MainActivity.this, "something went wrong: \n" + s, Toast.LENGTH_SHORT).show();
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "someting went wrong: \n" + s, Snackbar.LENGTH_LONG).show();
             } else {
 
                 try {

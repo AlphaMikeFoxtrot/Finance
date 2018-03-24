@@ -72,7 +72,7 @@ public class LoginActivity extends AppCompatActivity {
 
     private void checkLogin(String username, String password) {
 
-        if(username.length() > 4 && password.length() > 4){
+        if(username.length() >= 4 && password.length() >= 4){
             new CheckLogin().execute(username, password);
         } else {
             Toast.makeText(this, "Username/Password invalid!", Toast.LENGTH_SHORT).show();
