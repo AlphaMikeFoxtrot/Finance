@@ -1,6 +1,7 @@
 package com.anonymous.finance;
 
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -22,6 +23,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -44,7 +46,10 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity {
@@ -53,11 +58,16 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private android.support.v7.widget.Toolbar toolbar;
 
+    private int mYear, mMonth, mDay;
+
     ArrayList<Transaction> transactions = new ArrayList<>();
 
     ProgressDialog progressDialog;
 
     private TextView total;
+
+    public DatePickerDialog.OnDateSetListener date;
+    public Calendar myCalendar;
 
     SharedPreferences sharedPreferences;
     SharedPreferences.Editor editor;
@@ -278,8 +288,49 @@ public class MainActivity extends AppCompatActivity {
 
         } else if (item.getItemId() == R.id.reset){
             reset();
+        } else if (item.getItemId() == R.id.filter){
+
+            final Calendar c = Calendar.getInstance();
+            mYear = c.get(Calendar.YEAR);
+            mMonth = c.get(Calendar.MONTH);
+            mDay = c.get(Calendar.DAY_OF_MONTH);
+
+
+            DatePickerDialog datePickerDialog = new DatePickerDialog(this,
+                    new DatePickerDialog.OnDateSetListener() {
+
+                        @Override
+                        public void onDateSet(DatePicker view, int year,
+                                              int monthOfYear, int dayOfMonth) {
+
+                            StringBuilder sort_date = new StringBuilder();
+
+                            sort_date.append(year);
+                            sort_date.append("-");
+                            if(String.valueOf(monthOfYear).length() == 1){
+                                sort_date.append("0" + String.valueOf(monthOfYear + 1));
+                            } else {
+                                sort_date.append(monthOfYear + 1);
+                            }
+                            sort_date.append("-");
+                            sort_date.append(dayOfMonth);
+
+                            sortList(sort_date.toString());
+                            // Toast.makeText(MainActivity.this, "" + sort_date.toString(), Toast.LENGTH_SHORT).show();
+
+                        }
+                    }, mYear, mMonth, mDay);
+            datePickerDialog.show();
+
         }
         return true;
+    }
+
+    private void sortList(String date) {
+
+        // Toast.makeText(this, "" + date, Toast.LENGTH_SHORT).show();
+        new SortByDate().execute(date);
+
     }
 
     private void reset() {
@@ -704,6 +755,113 @@ public class MainActivity extends AppCompatActivity {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+            }
+        }
+    }
+
+    private class SortByDate extends AsyncTask<String, Void, String>{
+
+        @Override
+        protected void onPreExecute() {
+            progressDialog = new ProgressDialog(MainActivity.this);
+            progressDialog.setMessage("applying filter..");
+            progressDialog.show();
+        }
+
+        @Override
+        protected String doInBackground(String... strings) {
+            String date = strings[0];
+
+            HttpURLConnection httpURLConnection = null;
+            BufferedReader bufferedReader = null;
+            BufferedWriter bufferedWriter = null;
+
+            try {
+
+                URL url = new URL("http://fardeenpanjwani.com/money/get/get_by_date.php");
+                httpURLConnection = (HttpURLConnection) url.openConnection();
+                httpURLConnection.setDoOutput(true);
+                httpURLConnection.setDoInput(true);
+                httpURLConnection.connect();
+
+                bufferedWriter = new BufferedWriter(new OutputStreamWriter(httpURLConnection.getOutputStream(), "UTF-8"));
+
+                String data = URLEncoder.encode("date", "UTF-8") +"="+ URLEncoder.encode(date, "UTF-8");
+
+                bufferedWriter.write(data);
+                bufferedWriter.flush();
+                bufferedWriter.close();
+
+                bufferedReader = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
+
+                String line;
+                StringBuilder response = new StringBuilder();
+
+                while((line = bufferedReader.readLine()) != null){
+                    response.append(line);
+                }
+
+                return response.toString();
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+                return "url: " + e.toString();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return "IO: " + e.toString();
+            } finally {
+                if(httpURLConnection != null){
+                    httpURLConnection.disconnect();
+                }
+                if(bufferedReader != null){
+                    try {
+                        bufferedReader.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            progressDialog.dismiss();
+            ArrayList<Transaction> transactionsFiltered = new ArrayList<>();
+            if(s.contains("fail")){
+                Toast.makeText(MainActivity.this, "something went wrong: \n" + s, Toast.LENGTH_SHORT).show();
+            } else {
+
+                try {
+
+                    JSONArray root = new JSONArray(s);
+                    for(int i = 0; i < root.length(); i++){
+
+                        JSONObject transaction = root.getJSONObject(i);
+                        String username = transaction.getString("username");
+                        String type = transaction.getString("type");
+                        String comment = transaction.getString("comment");
+                        String uuid = transaction.getString("uuid");
+                        String amount = "";
+                        if(type.contains("debit")) {
+                            amount = "+ " + transaction.getString("amount");
+                        } else if(type.contains("credit")){
+                            amount = "- " + transaction.getString("amount");
+                        }
+                        String date = transaction.getString("date");
+                        String board = transaction.getString("board");
+                        String changed_balance = transaction.getString("changed_balance");
+                        Transaction current_transaction = new Transaction(comment, type, amount, username, date, board, changed_balance, uuid);
+                        transactionsFiltered.add(current_transaction);
+
+                    }
+
+                    adapter = new TransactionsAdapter(MainActivity.this, transactionsFiltered);
+                    recyclerView.setAdapter(adapter);
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
             }
         }
     }

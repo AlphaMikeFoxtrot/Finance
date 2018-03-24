@@ -19,4 +19,10 @@
         android:title="Reset"
         app:showAsAction="never"/>
 
+    <item
+        android:id="@+id/filter"
+        android:title="Apply Filter"
+        android:icon="@drawable/filter"
+        app:showAsAction="always"/>
+
 </menu>
