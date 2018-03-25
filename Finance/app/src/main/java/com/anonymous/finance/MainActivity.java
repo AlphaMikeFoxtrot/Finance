@@ -28,6 +28,7 @@ import android.widget.AdapterView;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.Toolbar;
@@ -265,7 +266,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Toast.makeText(this, "Data Updated", Toast.LENGTH_SHORT).show();
-        Snackbar.make(findViewById(R.id.coordinatorLayout), "Data Updated", Snackbar.LENGTH_LONG).show();
+        Snackbar.make(findViewById(R.id.coordinatorLayout), "Data Updated", Snackbar.LENGTH_SHORT).show();
 
     }
 
@@ -366,7 +367,7 @@ public class MainActivity extends AppCompatActivity {
                         } else {
                             dialogInterface.dismiss();
                             // Toast.makeText(MainActivity.this, "username and password incorrect.", Toast.LENGTH_SHORT).show();
-                            Snackbar.make(findViewById(R.id.coordinatorLayout), "username and password incorrect", Snackbar.LENGTH_LONG).show();
+                            Snackbar.make(findViewById(R.id.coordinatorLayout), "username and password incorrect", Snackbar.LENGTH_SHORT).show();
 
                         }
                     }
@@ -416,7 +417,7 @@ public class MainActivity extends AppCompatActivity {
 
                 if(response.toString().contains("error")){
                     // Toast.makeText(MainActivity.this, "Empty list returned", Toast.LENGTH_SHORT).show();
-                    Snackbar.make(findViewById(R.id.coordinatorLayout), "The list seems to be empty", Snackbar.LENGTH_LONG).show();
+                    Snackbar.make(findViewById(R.id.coordinatorLayout), "The list seems to be empty", Snackbar.LENGTH_SHORT).show();
                     progressDialog.dismiss();
                     return transactions;
                 } else {
@@ -492,7 +493,7 @@ public class MainActivity extends AppCompatActivity {
 
             try {
 
-                URL url = new URL("http://fardeenpanjwani.com/money/get/get_total.php");
+                URL url = new URL("http://fardeenpanjwani.com/money/get/calculate_total.php");
                 httpURLConnection = (HttpURLConnection) url.openConnection();
                 httpURLConnection.setDoOutput(true);
                 httpURLConnection.connect();
@@ -603,7 +604,7 @@ public class MainActivity extends AppCompatActivity {
             progressDialog.dismiss();
             if(s.contains("fail")){
                 // Toast.makeText(MainActivity.this, "and error occurred when paying amount\n" + s, Toast.LENGTH_SHORT).show();
-                Snackbar.make(findViewById(R.id.coordinatorLayout), "and error occurred when paying amount\n" + s, Snackbar.LENGTH_LONG).show();
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "and error occurred when paying amount\n" + s, Snackbar.LENGTH_SHORT).show();
                 try {
                     getContents();
                 } catch (ExecutionException e) {
@@ -613,7 +614,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else if(s.contains("success")){
                 // Toast.makeText(MainActivity.this, "payment successful", Toast.LENGTH_SHORT).show();
-                Snackbar.make(findViewById(R.id.coordinatorLayout), "payment successful", Snackbar.LENGTH_LONG).show();
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "payment successful", Snackbar.LENGTH_SHORT).show();
                 try {
                     getContents();
                 } catch (ExecutionException e) {
@@ -700,7 +701,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else if(s.contains("fail")){
                 // Toast.makeText(MainActivity.this, "an error occured while deleting transaction: \n" + s, Toast.LENGTH_SHORT).show();
-                Snackbar.make(findViewById(R.id.coordinatorLayout), "an error occured while deleting transaction: \n" + s, Snackbar.LENGTH_LONG).show();
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "an error occured while deleting transaction: \n" + s, Snackbar.LENGTH_SHORT).show();
                 try {
                     getContents();
                 } catch (ExecutionException e) {
@@ -765,7 +766,7 @@ public class MainActivity extends AppCompatActivity {
             progressDialog.dismiss();
             if(s.contains("success")){
                 // Toast.makeText(MainActivity.this, "data successfully reset", Toast.LENGTH_SHORT).show();
-                Snackbar.make(findViewById(R.id.coordinatorLayout), "data reset successful", Snackbar.LENGTH_LONG).show();
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "data reset successful", Snackbar.LENGTH_SHORT).show();
                 try {
                     getContents();
                 } catch (ExecutionException e) {
@@ -775,7 +776,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else if (s.contains("fail")){
                 // Toast.makeText(MainActivity.this, "an error occurred while resetting the data: \n" + s, Toast.LENGTH_SHORT).show();
-                Snackbar.make(findViewById(R.id.coordinatorLayout), "an error occurred while resetting the data: \n" + s, Snackbar.LENGTH_LONG).show();
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "an error occurred while resetting the data: \n" + s, Snackbar.LENGTH_SHORT).show();
                 try {
                     getContents();
                 } catch (ExecutionException e) {
@@ -857,35 +858,42 @@ public class MainActivity extends AppCompatActivity {
             ArrayList<Transaction> transactionsFiltered = new ArrayList<>();
             if(s.contains("fail")){
                 // Toast.makeText(MainActivity.this, "something went wrong: \n" + s, Toast.LENGTH_SHORT).show();
-                Snackbar.make(findViewById(R.id.coordinatorLayout), "someting went wrong: \n" + s, Snackbar.LENGTH_LONG).show();
+                Snackbar.make(findViewById(R.id.coordinatorLayout), "someting went wrong: \n" + s, Snackbar.LENGTH_SHORT).show();
             } else {
 
                 try {
 
                     JSONArray root = new JSONArray(s);
-                    for(int i = 0; i < root.length(); i++){
+                    if(root.length() > 0) {
+                        for (int i = 0; i < root.length(); i++) {
 
-                        JSONObject transaction = root.getJSONObject(i);
-                        String username = transaction.getString("username");
-                        String type = transaction.getString("type");
-                        String comment = transaction.getString("comment");
-                        String uuid = transaction.getString("uuid");
-                        String amount = "";
-                        if(type.contains("debit")) {
-                            amount = "+ " + transaction.getString("amount");
-                        } else if(type.contains("credit")){
-                            amount = "- " + transaction.getString("amount");
+                            JSONObject transaction = root.getJSONObject(i);
+                            String username = transaction.getString("username");
+                            String type = transaction.getString("type");
+                            String comment = transaction.getString("comment");
+                            String uuid = transaction.getString("uuid");
+                            String amount = "";
+                            if (type.contains("debit")) {
+                                amount = "+ " + transaction.getString("amount");
+                            } else if (type.contains("credit")) {
+                                amount = "- " + transaction.getString("amount");
+                            }
+                            String date = transaction.getString("date");
+                            String board = transaction.getString("board");
+                            String changed_balance = transaction.getString("changed_balance");
+                            Transaction current_transaction = new Transaction(comment, type, amount, username, date, board, changed_balance, uuid);
+                            transactionsFiltered.add(current_transaction);
+
                         }
-                        String date = transaction.getString("date");
-                        String board = transaction.getString("board");
-                        String changed_balance = transaction.getString("changed_balance");
-                        Transaction current_transaction = new Transaction(comment, type, amount, username, date, board, changed_balance, uuid);
-                        transactionsFiltered.add(current_transaction);
 
+                        adapter = new TransactionsAdapter(MainActivity.this, transactionsFiltered);
+                        recyclerView.setAdapter(adapter);
+
+                    } else {
+                        recyclerView.setVisibility(View.GONE);
+                        ImageView error = findViewById(R.id.not_found);
+                        error.setVisibility(View.VISIBLE);
                     }
-
-                    adapter = new TransactionsAdapter(MainActivity.this, transactionsFiltered);
-                    recyclerView.setAdapter(adapter);
 
                 } catch (JSONException e) {
                     e.printStackTrace();
