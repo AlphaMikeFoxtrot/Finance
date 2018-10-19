@@ -102,7 +102,7 @@ public class LoginActivity extends AppCompatActivity {
 
             try {
 
-                URL url = new URL(getString(R.string.API_LOGIN));
+                URL url = new URL("http://fardeenpanjwani.com/finance/login/check_login.php");
                 httpURLConnection = (HttpURLConnection) url.openConnection();
                 httpURLConnection.setDoInput(true);
                 httpURLConnection.setDoOutput(true);
